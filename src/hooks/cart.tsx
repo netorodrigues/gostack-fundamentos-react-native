@@ -27,26 +27,63 @@ const CartContext = createContext<CartContext | null>(null);
 
 const CartProvider: React.FC = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
-
   useEffect(() => {
     async function loadProducts(): Promise<void> {
-      // TODO LOAD ITEMS FROM ASYNC STORAGE
+      const storedProducts = await AsyncStorage.getItem('Products');
+      if (storedProducts) setProducts(JSON.parse(storedProducts));
     }
 
     loadProducts();
   }, []);
 
-  const addToCart = useCallback(async product => {
-    // TODO ADD A NEW ITEM TO THE CART
-  }, []);
+  const addToCart = useCallback(
+    async (product: Product): Promise<void> => {
+      const alreadyExistsProduct = products.filter(
+        existingProduct => existingProduct.id === product.id,
+      );
 
-  const increment = useCallback(async id => {
-    // TODO INCREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+      product.quantity = 1;
+      const actualProducts = [product, ...products];
+      setProducts(actualProducts);
+      await AsyncStorage.setItem('Products', JSON.stringify(actualProducts));
+    },
+    [setProducts, products],
+  );
 
-  const decrement = useCallback(async id => {
-    // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+  const increment = useCallback(
+    async id => {
+      const productObject = products.filter(
+        projectListed => projectListed.id === id,
+      )[0];
+      productObject.quantity += 1;
+      const otherProducts = products.filter(product => product.id !== id);
+      const actualProducts = [productObject, ...otherProducts];
+      setProducts(actualProducts);
+      await AsyncStorage.setItem('Products', JSON.stringify(actualProducts));
+    },
+    [products],
+  );
+
+  const decrement = useCallback(
+    async id => {
+      const productObject = products.filter(
+        projectListed => projectListed.id === id,
+      )[0];
+      productObject.quantity -= 1;
+      let actualProducts;
+      if (productObject.quantity <= 0) {
+        actualProducts = products.filter(
+          actualProduct => actualProduct.id !== id,
+        );
+      } else {
+        const otherProducts = products.filter(product => product.id !== id);
+        actualProducts = [productObject, ...otherProducts];
+      }
+      setProducts(actualProducts);
+      await AsyncStorage.setItem('Products', JSON.stringify(actualProducts));
+    },
+    [products],
+  );
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
